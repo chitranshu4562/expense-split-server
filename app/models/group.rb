@@ -11,7 +11,7 @@ class Group < ApplicationRecord
     group_users.find_or_create_by(user_id: user_id)
   end
 
-  def is_member?(user)
-    group_users.exists?(user_id: user.id)
+  def is_member?(user_id)
+    group_users.exists?(user_id: user_id)
   end
 end

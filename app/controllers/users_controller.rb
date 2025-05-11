@@ -31,4 +31,20 @@ class UsersController < ApplicationController
     users_data = users.select(:id, :name)
     render json: { data: users_data, message: 'Users is fetched successfully' }, status: :ok
   end
+
+  def update_user_profile
+    user_id = params[:user_id].presence
+    raise BadRequest, 'User id must be present.' if user_id.blank?
+
+    user = User.find_by(id: user_id)
+    raise RecordNotFound, 'User not found' if user.blank?
+
+    name = params[:name].presence
+    email = params[:email].presence
+
+    user.name = name if name.present?
+    user.email = email if email.present?
+    user.save!
+    render json: { success: true, data: user, message: 'User is updated successfully' }, status: :ok
+  end
 end
