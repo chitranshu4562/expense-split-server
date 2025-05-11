@@ -131,7 +131,7 @@ class ExpensesController < ApplicationController
     paid_by = User.find_by(id: paid_by_id) if paid_by_id.present?
 
     if paid_by.present?
-      raise BadRequest, 'User(who paid bill) is not a member of group' if group.is_member?(paid_by)
+      raise BadRequest, 'User(who paid bill) is not a member of group' unless group.is_member?(paid_by.id)
     end
 
     expense.description = description if description.present?
@@ -141,31 +141,33 @@ class ExpensesController < ApplicationController
     expense.save!
 
     users_split_amount = Array(params[:users_split_amount]).compact_blank
-    raise BadRequest, 'Split data cannot be blank' if users_split_amount.blank?
 
-    users_split_amount.each do |split|
-      unless group.is_member?(split[:user_id])
-        raise BadRequest, "User(#{split[:user_id]}) is not a member of group"
+    if users_split_amount.any?
+      users_split_amount.each do |split|
+        unless group.is_member?(split[:user_id])
+          raise BadRequest, "User(#{split[:user_id]}) is not a member of group"
+        end
       end
+
+      total_split_amount = users_split_amount.sum { |split| split[:share] }
+      unless amount == total_split_amount
+        raise BadRequest, 'Total split amount is not equal to expenses amount'
+      end
+
+      expense_splits = users_split_amount.map do |split|
+        {
+          expense_id: expense.id,
+          user_id: split[:user_id],
+          share: split[:share],
+          is_debt: true,
+          created_at: Time.current,
+          updated_at: Time.current
+        }
+      end
+
+      ExpenseSplit.insert_all(expense_splits)
     end
 
-    total_split_amount = users_split_amount.sum { |split| split[:share] }
-    unless amount == total_split_amount
-      raise BadRequest, 'Total split amount is not equal to expenses amount'
-    end
-
-    expense_splits = users_split_amount.map do |split|
-      {
-        expense_id: expense.id,
-        user_id: split[:user_id],
-        share: split[:share],
-        is_debt: true,
-        created_at: Time.current,
-        updated_at: Time.current
-      }
-    end
-
-    ExpenseSplit.insert_all(expense_splits)
     render json: { success: true, message: 'Expense Split updated!' }, status: 200
   end
 

@@ -68,6 +68,7 @@ class GroupsController < ApplicationController
                             GROUP BY expenses.group_id, expense_splits.user_id) AS user_split_amounts ON user_split_amounts.group_id = group_users.group_id AND user_split_amounts.user_id = group_users.user_id")
 
     group_users = group_users.select("users.id, users.name AS user_name, COALESCE(user_paid_amounts.paid_amount, 0) AS user_paid_amount, COALESCE(user_split_amounts.split_amount, 0) AS user_split_amount")
+    group_users = group_users.order("users.name")
 
     overview = []
     group_users.each do |row|
